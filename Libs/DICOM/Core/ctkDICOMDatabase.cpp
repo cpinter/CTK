@@ -2064,3 +2064,9 @@ void ctkDICOMDatabasePrivate::getDisplayFieldsCache( QMap<QString, QMap<QString,
     displayFieldsMapPatient.insert(patientInstanceUID, patientFieldsMap);
   }
 }
+
+//------------------------------------------------------------------------------
+void ctkDICOMDatabase::updateDisplayedFields()
+{
+  // TODO: implement this
+}

@@ -160,6 +160,11 @@ void ctkDICOMIndexer::addListOfFiles(ctkDICOMDatabase& database,
       break;
       }
   }
+
+  // Update display tables according to inserted DICOM datasets
+  ctkDICOMDatabase.updateDisplayedFields();
+
+  emit this->indexingComplete();
   float elapsedTimeInSeconds = timeProbe.elapsed() / 1000.0;
   qDebug()
       << QString("DICOM indexer has successfully processed %1 files [%2s]")

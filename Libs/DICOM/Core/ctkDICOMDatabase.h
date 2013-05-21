@@ -199,6 +199,9 @@ public:
                             bool createHierarchy = true,
                             const QString& destinationDirectoryName = QString() );
 
+  /// Update the fields in the database that are used for displaying information from information stored in the tag-cache
+  void updateDisplayedFields();
+
   /// Reset cached item IDs to make sure previous
   /// inserts do not interfere with upcoming insert operations.
   /// Typically, it should be call just before a batch of files

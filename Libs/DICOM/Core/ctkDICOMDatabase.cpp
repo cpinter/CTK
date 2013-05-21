@@ -503,7 +503,7 @@ QString ctkDICOMDatabase::schemaVersion()
   //   so that the ctkDICOMDatabasePrivate::filenames method
   //   still works.
   //
-  return QString("0.5.3");
+  return QString("0.6.0");
 };
 
 //------------------------------------------------------------------------------
@@ -1426,7 +1426,7 @@ void ctkDICOMDatabasePrivate::insert( const ctkDICOMItem& ctkDataset, const QStr
       return;
     }
 
-  // store the file if the database is not in memomry
+  // store the file if the database is not in memory
   // TODO: if we are called from insert(file) we
   // have to do something else
   //
@@ -1904,4 +1904,12 @@ bool ctkDICOMDatabase::cacheTags(const QStringList sopInstanceUIDs, const QStrin
   insertTags.addBindValue(tags);
   insertTags.addBindValue(values);
   return d->loggedExecBatch(insertTags);
+}
+
+//------------------------------------------------------------------------------
+void ctkDICOMDatabase::updateDisplayedFields()
+{
+  //TODO Update the files for which the DisplayedFieldsUpdatedTimestamp is NULL
+
+  //TODO Use rules
 }

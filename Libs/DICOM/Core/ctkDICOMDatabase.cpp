@@ -1986,6 +1986,8 @@ void ctkDICOMDatabase::updateDisplayedFields()
   QMap<QString, QMap<QString, QString> > displayFieldsMapSeries;
   d->getDisplayFieldsCache(displayFieldsMapPatient, displayFieldsMapStudy, displayFieldsMapSeries);
 
+  d->DisplayedFieldGenerator.setDatabase(this);
+
   // Get display names for newly added files and add them into the display tables
   ctkDICOMDisplayRuleManager* ruleManager = new ctkDICOMDisplayRuleManager();
   ruleManager->setDatabase(d->Database);

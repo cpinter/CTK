@@ -129,16 +129,16 @@ public:
   ///
   /// TODO
   ///
-  void getDisplayFieldsCache( QMap<QString, QMap<QString, QString> > &displayFieldsMapPatient,
+  void getDisplayFieldsCache( QMap<QString, QMap<QString, QString> > &displayFieldsMapSeries,
                               QMap<QString, QMap<QString, QString> > &displayFieldsMapStudy,
-                              QMap<QString, QMap<QString, QString> > &displayFieldsMapSeries );
+                              QMap<QString, QMap<QString, QString> > &displayFieldsMapPatient );
 
   ///
   /// TODO
   ///
-  void applyDisplayFieldsChanges( QMap<QString, QMap<QString, QString> > &displayFieldsMapPatient,
+  void applyDisplayFieldsChanges( QMap<QString, QMap<QString, QString> > &displayFieldsMapSeries,
                                   QMap<QString, QMap<QString, QString> > &displayFieldsMapStudy,
-                                  QMap<QString, QMap<QString, QString> > &displayFieldsMapSeries );
+                                  QMap<QString, QMap<QString, QString> > &displayFieldsMapPatient );
 
   ///
   /// get all Filename values from table
@@ -1981,10 +1981,10 @@ void ctkDICOMDatabase::updateDisplayedFields()
   d->loggedExec(newFilesQuery,QString("SELECT SOPInstanceUID, SeriesInstanceUID FROM Images WHERE DisplayedFieldsUpdatedTimestamp IS NULL;"));
 
   // Populate display fields maps from the current display tables
-  QMap<QString, QMap<QString, QString> > displayFieldsMapPatient;
-  QMap<QString, QMap<QString, QString> > displayFieldsMapStudy;
   QMap<QString, QMap<QString, QString> > displayFieldsMapSeries;
-  d->getDisplayFieldsCache(displayFieldsMapPatient, displayFieldsMapStudy, displayFieldsMapSeries);
+  QMap<QString, QMap<QString, QString> > displayFieldsMapStudy;
+  QMap<QString, QMap<QString, QString> > displayFieldsMapPatient;
+  d->getDisplayFieldsCache(displayFieldsMapSeries, displayFieldsMapStudy, displayFieldsMapPatient);
 
   d->DisplayedFieldGenerator.setDatabase(this);
 
@@ -1999,7 +1999,7 @@ void ctkDICOMDatabase::updateDisplayedFields()
     QMap<QString, QString> displayFieldsForCurrentPatient = displayFieldsMapPatient[ displayFieldsForCurrentStudy["PatientsUID"] ];
 
     ruleManager->updateDisplayFieldsForInstance(newFilesQuery.value(0).toString(),
-      displayFieldsForCurrentPatient, displayFieldsForCurrentStudy, displayFieldsForCurrentSeries);
+      displayFieldsForCurrentSeries, displayFieldsForCurrentStudy, displayFieldsForCurrentPatient);
 
     displayFieldsMapSeries[newFilesQuery.value(1).toString()] = displayFieldsForCurrentSeries;
     displayFieldsMapStudy[ displayFieldsForCurrentSeries["StudyInstanceUID"] ] = displayFieldsForCurrentStudy;
@@ -2010,14 +2010,14 @@ void ctkDICOMDatabase::updateDisplayedFields()
   // Update/insert the display values
   if (displayFieldsMapSeries.count() > 0)
   {
-    d->applyDisplayFieldsChanges(displayFieldsMapPatient, displayFieldsMapStudy, displayFieldsMapSeries);
+    d->applyDisplayFieldsChanges(displayFieldsMapSeries, displayFieldsMapStudy, displayFieldsMapPatient);
   }
 }
 
 //------------------------------------------------------------------------------
-void ctkDICOMDatabasePrivate::getDisplayFieldsCache( QMap<QString, QMap<QString, QString> > &displayFieldsMapPatient,
+void ctkDICOMDatabasePrivate::getDisplayFieldsCache( QMap<QString, QMap<QString, QString> > &displayFieldsMapSeries,
                                                 QMap<QString, QMap<QString, QString> > &displayFieldsMapStudy,
-                                                QMap<QString, QMap<QString, QString> > &displayFieldsMapSeries )
+                                                QMap<QString, QMap<QString, QString> > &displayFieldsMapPatient )
 {
   QSqlQuery seriesQuery(Database);
   displayFieldsMapSeries.clear();
@@ -2069,9 +2069,9 @@ void ctkDICOMDatabasePrivate::getDisplayFieldsCache( QMap<QString, QMap<QString,
 }
 
 //------------------------------------------------------------------------------
-void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QString, QString> > &displayFieldsMapPatient,
+void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QString, QString> > &displayFieldsMapSeries,
                                                          QMap<QString, QMap<QString, QString> > &displayFieldsMapStudy,
-                                                         QMap<QString, QMap<QString, QString> > &displayFieldsMapSeries )
+                                                         QMap<QString, QMap<QString, QString> > &displayFieldsMapPatient )
 {
   foreach (QString currentPatientUid, displayFieldsMapPatient.keys())
   {
@@ -2085,8 +2085,11 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
       QString displayPatientsFieldList, displayPatientsValueList;
       foreach (QString tagName, currentPatient.keys())
       {
-        displayPatientsFieldList.append( "'" + tagName + "', " );
-        displayPatientsValueList.append( currentPatient[tagName] + ", " );
+        if (tagName.compare("UID")) // UID is auto-increment, we cannot set that
+        {
+          displayPatientsFieldList.append( tagName + ", " );
+          displayPatientsValueList.append( currentPatient[tagName].isEmpty() ? "NULL, " : "'" + currentPatient[tagName] + "', " );
+        }
       }
       // Trim the separators from the end
       displayPatientsFieldList = displayPatientsFieldList.left(displayPatientsFieldList.size() - 3);
@@ -2119,13 +2122,13 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
     QMap<QString, QString> currentStudy = displayFieldsMapStudy[currentStudyInstanceUid];
     QSqlQuery displayStudiesQuery(Database);
     QSqlQuery applyDisplayStudyChangesStatement(Database);
-    displayStudiesQuery.prepare( QString("SELECT UID FROM DisplayStudies WHERE UID = %1 ;").arg(currentStudy["UID"]) );
+    displayStudiesQuery.prepare( QString("SELECT StudyInstanceUID FROM DisplayStudies WHERE StudyInstanceUID = %1 ;").arg(currentStudy["StudyInstanceUID"]) );
     if (!displayStudiesQuery.next())
     {
       QString displayStudiesFieldList, displayStudiesValueList;
       foreach (QString tagName, currentStudy.keys())
       {
-        displayStudiesFieldList.append( "'" + tagName + "', " );
+        displayStudiesFieldList.append( tagName + ", " );
         displayStudiesValueList.append( currentStudy[tagName] + ", " );
       }
       // Trim the separators from the end
@@ -2146,9 +2149,9 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
       // Trim the separators from the end
       displayStudiesFieldUpdateList = displayStudiesFieldUpdateList.left(displayStudiesFieldUpdateList.size() - 2);
 
-      applyDisplayStudyChangesStatement.prepare ( "UPDATE table_name SET (?) WHERE UID=(?);" );
-      applyDisplayStudyChangesStatement.bindValue ( 0, displayStudiesFieldUpdateList );
-      applyDisplayStudyChangesStatement.bindValue ( 1, currentStudy["UID"] );
+      QString applyDisplayStudyChangesStatementString = 
+        QString("UPDATE DisplayStudies SET %1 WHERE StudyInstanceUID=%2;").arg(displayStudiesFieldUpdateList).arg(currentStudy["StudyInstanceUID"]);
+      applyDisplayStudyChangesStatement.prepare(applyDisplayStudyChangesStatementString);
     }
     loggedExec(applyDisplayStudyChangesStatement);
   }
@@ -2159,13 +2162,13 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
     QMap<QString, QString> currentSeries = displayFieldsMapSeries[currentSeriesInstanceUid];
     QSqlQuery displaySeriesQuery(Database);
     QSqlQuery applyDisplaySeriesChangesStatement(Database);
-    displaySeriesQuery.prepare( QString("SELECT UID FROM DisplaySeries WHERE UID = %1 ;").arg(currentSeries["UID"]) );
+    displaySeriesQuery.prepare( QString("SELECT SeriesInstanceUID FROM DisplaySeries WHERE SeriesInstanceUID = %1 ;").arg(currentSeries["SeriesInstanceUID"]) );
     if (!displaySeriesQuery.next())
     {
       QString displaySeriesFieldList, displaySeriesValueList;
       foreach (QString tagName, currentSeries.keys())
       {
-        displaySeriesFieldList.append( "'" + tagName + "', " );
+        displaySeriesFieldList.append( tagName + ", " );
         displaySeriesValueList.append( currentSeries[tagName] + ", " );
       }
       // Trim the separators from the end
@@ -2186,9 +2189,9 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
       // Trim the separators from the end
       displaySeriesFieldUpdateList = displaySeriesFieldUpdateList.left(displaySeriesFieldUpdateList.size() - 2);
 
-      applyDisplaySeriesChangesStatement.prepare ( "UPDATE table_name SET (?) WHERE UID=(?);" );
-      applyDisplaySeriesChangesStatement.bindValue ( 0, displaySeriesFieldUpdateList );
-      applyDisplaySeriesChangesStatement.bindValue ( 1, currentSeries["UID"] );
+      QString applyDisplaySeriesChangesStatementString = 
+        QString("UPDATE DisplaySeries SET %1 WHERE SeriesInstanceUID=%2;").arg(displaySeriesFieldUpdateList).arg(currentSeries["SeriesInstanceUID"]);
+      applyDisplaySeriesChangesStatement.prepare(applyDisplaySeriesChangesStatementString);
     }
     loggedExec(applyDisplaySeriesChangesStatement);
   }

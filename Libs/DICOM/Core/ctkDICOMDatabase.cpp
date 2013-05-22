@@ -1901,6 +1901,37 @@ QString ctkDICOMDatabase::cachedTag(const QString sopInstanceUID, const QString 
 }
 
 //------------------------------------------------------------------------------
+void ctkDICOMDatabase::getCachedTags(const QString sopInstanceUID, QMap<QString, QString> &cachedTags)
+{
+  Q_D(ctkDICOMDatabase);
+  cachedTags.clear();
+  if ( !this->tagCacheExists() )
+    {
+    if ( !this->initializeTagCache() )
+      {
+      // cache is empty
+      return;
+      }
+    }
+  QSqlQuery selectValue( d->TagCacheDatabase );
+  selectValue.prepare( "SELECT Tag, Value FROM TagCache WHERE SOPInstanceUID = :sopInstanceUID" );
+  selectValue.bindValue(":sopInstanceUID",sopInstanceUID);
+  d->loggedExec(selectValue);
+  QString tag;
+  QString value;
+  while (selectValue.next())
+    {
+    tag = selectValue.value(0).toString();
+    value = selectValue.value(1).toString();
+    if (value == QString(""))
+      {
+      value = ValueIsEmptyString;
+      }
+    cachedTags.insert(tag, value);
+    }
+}
+
+//------------------------------------------------------------------------------
 bool ctkDICOMDatabase::cacheTag(const QString sopInstanceUID, const QString tag, const QString value)
 {
   QStringList sopInstanceUIDs, tags, values;
@@ -1960,7 +1991,8 @@ void ctkDICOMDatabase::updateDisplayedFields()
   ruleManager->setDatabase(d->Database);
   while (newFilesQuery.next())
   {
-    QMap<QString, QString> displayFieldsForCurrentSeries = displayFieldsMapSeries[newFilesQuery.value(1).toString()];
+    QString seriesInstanceUID=newFilesQuery.value(1).toString();
+    QMap<QString, QString> displayFieldsForCurrentSeries = displayFieldsMapSeries[seriesInstanceUID];
     QMap<QString, QString> displayFieldsForCurrentStudy = displayFieldsMapStudy[ displayFieldsForCurrentSeries["StudyInstanceUID"] ];
     QMap<QString, QString> displayFieldsForCurrentPatient = displayFieldsMapPatient[ displayFieldsForCurrentStudy["PatientsUID"] ];
 

@@ -26,6 +26,7 @@
 #include "ctkDICOMDisplayedFieldGenerator.h"
 #include "ctkDICOMDisplayedFieldGenerator_p.h"
 
+#include "ctkDICOMDatabase.h"
 #include "ctkDICOMDisplayedFieldGeneratorDefaultRule.h"
 #include "ctkDICOMDisplayedFieldGeneratorRadiotherapySeriesDescriptionRule.h"
 
@@ -84,4 +85,40 @@ QStringList ctkDICOMDisplayedFieldGenerator::getRequiredTags()
 
   // TODO: remove duplicates from requiredTags (maybe also sort)
   return requiredTags;
+}
+
+//------------------------------------------------------------------------------
+void ctkDICOMDisplayedFieldGenerator::updateDisplayFieldsForInstance( QString sopInstanceUID,
+  QMap<QString, QString> &displayFieldsForCurrentSeries, QMap<QString, QString> &displayFieldsForCurrentStudy, QMap<QString, QString> &displayFieldsForCurrentPatient )
+{
+  Q_D(ctkDICOMDisplayedFieldGenerator);
+
+  QMap<QString, QString> cachedTags;
+  d->Database->getCachedTags(sopInstanceUID, cachedTags);
+
+  QMap<QString, QString> newFieldsSeries;
+  QMap<QString, QString> newFieldsStudy;
+  QMap<QString, QString> newFieldsPatient;   
+  foreach(ctkDICOMDisplayedFieldGeneratorAbstractRule* rule, d->AllRules)
+  {
+    rule->getDisplayFieldsForInstance(cachedTags,newFieldsSeries,newFieldsStudy,newFieldsPatient);   
+  }
+  QMap<QString, QString> initialFieldsSeries=displayFieldsForCurrentSeries;
+  QMap<QString, QString> initialFieldsStudy=displayFieldsForCurrentStudy;
+  QMap<QString, QString> initialFieldsPatient=displayFieldsForCurrentPatient;   
+  foreach(ctkDICOMDisplayedFieldGeneratorAbstractRule* rule, d->AllRules)
+  {
+    rule->mergeDisplayFieldsForInstance(
+      initialFieldsSeries, initialFieldsStudy, initialFieldsPatient, // original DB contents
+      newFieldsSeries, newFieldsStudy, newFieldsPatient, // new value
+      displayFieldsForCurrentSeries, displayFieldsForCurrentStudy, displayFieldsForCurrentPatient // new DB contents
+      );   
+  }
+}
+
+//------------------------------------------------------------------------------
+void ctkDICOMDisplayedFieldGenerator::setDatabase(ctkDICOMDatabase* database)
+{
+  Q_D(ctkDICOMDisplayedFieldGenerator);
+  d->Database=database;
 }

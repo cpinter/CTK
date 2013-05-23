@@ -1070,7 +1070,7 @@ void ctkDICOMDatabasePrivate::insertSeries(const ctkDICOMDataset& ctkDataset, QS
       insertSeriesStatement.bindValue ( 13, static_cast<int>(temporalPosition) );
       if ( !insertSeriesStatement.exec() )
         {
-          logger.error ( "Error executing statament: "
+          logger.error ( "Error executing statement: "
                          + insertSeriesStatement.lastQuery()
                          + " Error: " + insertSeriesStatement.lastError().text() );
           LastSeriesInstanceUID = "";
@@ -1743,7 +1743,11 @@ int ctkDICOMDatabasePrivate::getDisplayPatientFieldsIndex(QString patientName, Q
   displayPatientsQuery.prepare( "SELECT * FROM DisplayPatients WHERE PatientID = :patientID AND PatientName = :patientName ;" );
   displayPatientsQuery.bindValue(":patientID",patientID);
   displayPatientsQuery.bindValue(":patientName",patientName);
-  displayPatientsQuery.exec();
+  if (!displayPatientsQuery.exec())
+  {
+    logger.error("SQLITE ERROR: " + displayPatientsQuery.lastError().driverText());
+    return -1;
+  }
   //TODO: sanity check for result size
   if (displayPatientsQuery.next())
   {
@@ -1786,7 +1790,11 @@ QString ctkDICOMDatabasePrivate::getDisplayStudyFieldsKey(QString studyInstanceU
   QSqlQuery displayStudiesQuery(Database);
   displayStudiesQuery.prepare( QString("SELECT StudyInstanceUID FROM DisplayStudies WHERE StudyInstanceUID = :studyInstanceUID ;") );
   displayStudiesQuery.bindValue(":studyInstanceUID",studyInstanceUID);
-  displayStudiesQuery.exec();
+  if (!displayStudiesQuery.exec())
+  {
+    logger.error("SQLITE ERROR: " + displayStudiesQuery.lastError().driverText());
+    return QString();
+  }
   //TODO: sanity check for result size
   if (displayStudiesQuery.next())
   {
@@ -1822,7 +1830,11 @@ QString ctkDICOMDatabasePrivate::getDisplaySeriesFieldsKey(QString seriesInstanc
   QSqlQuery displaySeriesQuery(Database);
   displaySeriesQuery.prepare( QString("SELECT SeriesInstanceUID FROM DisplaySeries WHERE SeriesInstanceUID = :seriesInstanceUID ;") );
   displaySeriesQuery.bindValue(":seriesInstanceUID",seriesInstanceUID);
-  displaySeriesQuery.exec();
+  if (!displaySeriesQuery.exec())
+  {
+    logger.error("SQLITE ERROR: " + displaySeriesQuery.lastError().driverText());
+    return QString();
+  }
   //TODO: sanity check for result size
   if (displaySeriesQuery.next())
   {
@@ -1857,10 +1869,14 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
     QMap<QString, QString> currentPatient = displayFieldsVectorPatient[patientIndex];
 
     QSqlQuery displayPatientsQuery(Database);
-    displayPatientsQuery.prepare( "SELECT * FROM DisplayPatients WHERE PatientID = ':patientID' AND PatientName = ':patientName' ;" );
+    displayPatientsQuery.prepare( "SELECT * FROM DisplayPatients WHERE PatientID=:patientID AND PatientName=:patientName ;" );
     displayPatientsQuery.bindValue(":patientID",currentPatient["PatientID"]);
     displayPatientsQuery.bindValue(":patientName",currentPatient["PatientName"]);
-    displayPatientsQuery.exec();
+    if (!displayPatientsQuery.exec())
+    {
+      logger.error("SQLITE ERROR: " + displayPatientsQuery.lastError().driverText());
+      return;
+    }
     if (!displayPatientsQuery.next())
     {
       QString displayPatientsFieldList, displayPatientsValueList;
@@ -1902,7 +1918,7 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
 
       QSqlQuery updateDisplayPatientStatement(Database);
       QString updateDisplayPatientStatementString = 
-        QString("UPDATE DisplayPatients SET %1 WHERE UID=%2;").arg(displayPatientsFieldUpdateList).arg(patientUID);
+        QString("UPDATE DisplayPatients SET %1 WHERE UID='%2';").arg(displayPatientsFieldUpdateList).arg(patientUID);
       loggedExec(updateDisplayPatientStatement, updateDisplayPatientStatementString);
     }
 
@@ -1914,7 +1930,12 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
   {
     // Insert row into DisplayStudies if does not exist
     QMap<QString, QString> currentStudy = displayFieldsMapStudy[currentStudyInstanceUid];
-    QSqlQuery displayStudiesQuery(QString("SELECT StudyInstanceUID FROM DisplayStudies WHERE StudyInstanceUID = '%1' ;").arg(currentStudyInstanceUid), Database);
+    QSqlQuery displayStudiesQuery(QString("SELECT StudyInstanceUID FROM DisplayStudies WHERE StudyInstanceUID='%1' ;").arg(currentStudyInstanceUid), Database);
+    if (!displayStudiesQuery.exec())
+    {
+      logger.error("SQLITE ERROR: " + displayStudiesQuery.lastError().driverText());
+      return;
+    }
     if (!displayStudiesQuery.next())
     {
       QString displayStudiesFieldList, displayStudiesValueList;
@@ -1959,7 +1980,7 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
 
       QSqlQuery updateDisplayStudyStatement(Database);
       QString updateDisplayStudyStatementString = 
-        QString("UPDATE DisplayStudies SET %1 WHERE StudyInstanceUID=%2;").arg(displayStudiesFieldUpdateList).arg(currentStudy["StudyInstanceUID"]);
+        QString("UPDATE DisplayStudies SET %1 WHERE StudyInstanceUID='%2';").arg(displayStudiesFieldUpdateList).arg(currentStudy["StudyInstanceUID"]);
       loggedExec(updateDisplayStudyStatement, updateDisplayStudyStatementString);
     }
   }
@@ -1968,7 +1989,12 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
   {
     // Insert row into DisplaySeries if does not exist
     QMap<QString, QString> currentSeries = displayFieldsMapSeries[currentSeriesInstanceUid];
-    QSqlQuery displaySeriesQuery(QString("SELECT SeriesInstanceUID FROM DisplaySeries WHERE SeriesInstanceUID = '%1' ;").arg(currentSeriesInstanceUid), Database);
+    QSqlQuery displaySeriesQuery(QString("SELECT SeriesInstanceUID FROM DisplaySeries WHERE SeriesInstanceUID='%1' ;").arg(currentSeriesInstanceUid), Database);
+    if (!displaySeriesQuery.exec())
+    {
+      logger.error("SQLITE ERROR: " + displaySeriesQuery.lastError().driverText());
+      return;
+    }
     if (!displaySeriesQuery.next())
     {
       QString displaySeriesFieldList, displaySeriesValueList;
@@ -1998,7 +2024,7 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
 
       QSqlQuery updateDisplaySeriesStatement(Database);
       QString updateDisplaySeriesStatementString = 
-        QString("UPDATE DisplaySeries SET %1 WHERE SeriesInstanceUID=%2;").arg(displaySeriesFieldUpdateList).arg(currentSeries["SeriesInstanceUID"]);
+        QString("UPDATE DisplaySeries SET %1 WHERE SeriesInstanceUID='%2';").arg(displaySeriesFieldUpdateList).arg(currentSeries["SeriesInstanceUID"]);
       loggedExec(updateDisplaySeriesStatement, updateDisplaySeriesStatementString);
     }
   }

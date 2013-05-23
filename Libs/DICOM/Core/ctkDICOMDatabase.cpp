@@ -1754,6 +1754,10 @@ bool ctkDICOMDatabase::cleanup()
   seriesCleanup.exec("DELETE FROM Series WHERE ( SELECT COUNT(*) FROM Images WHERE Images.SeriesInstanceUID = Series.SeriesInstanceUID ) = 0;");
   seriesCleanup.exec("DELETE FROM Studies WHERE ( SELECT COUNT(*) FROM Series WHERE Series.StudyInstanceUID = Studies.StudyInstanceUID ) = 0;");
   seriesCleanup.exec("DELETE FROM Patients WHERE ( SELECT COUNT(*) FROM Studies WHERE Studies.PatientsUID = Patients.UID ) = 0;");
+
+  seriesCleanup.exec("DELETE FROM DisplaySeries WHERE ( SELECT COUNT(*) FROM Images WHERE Images.SeriesInstanceUID = DisplaySeries.SeriesInstanceUID ) = 0;");
+  seriesCleanup.exec("DELETE FROM DisplayStudies WHERE ( SELECT COUNT(*) FROM DisplaySeries WHERE DisplaySeries.StudyInstanceUID = DisplayStudies.StudyInstanceUID ) = 0;");
+  seriesCleanup.exec("DELETE FROM DisplayPatients WHERE ( SELECT COUNT(*) FROM DisplayStudies WHERE DisplayStudies.PatientsUID = DisplayPatients.UID ) = 0;");
   return true;
 }
 
@@ -2168,7 +2172,7 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
     QMap<QString, QString> currentPatient = displayFieldsVectorPatient[patientIndex];
 
     QSqlQuery displayPatientsQuery(Database);
-    displayPatientsQuery.prepare( "SELECT * FROM DisplayPatients WHERE PatientID = :patientID AND PatientName = :patientName ;" );
+    displayPatientsQuery.prepare( "SELECT * FROM DisplayPatients WHERE PatientID = ':patientID' AND PatientName = ':patientName' ;" );
     displayPatientsQuery.bindValue(":patientID",currentPatient["PatientID"]);
     displayPatientsQuery.bindValue(":patientName",currentPatient["PatientName"]);
     displayPatientsQuery.exec();
@@ -2177,7 +2181,7 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
       QString displayPatientsFieldList, displayPatientsValueList;
       foreach (QString tagName, currentPatient.keys())
       {
-        if (tagName.compare("PatientIndex"))
+        if (tagName.compare("PatientIndex") && tagName.compare("UID"))
         {
           displayPatientsFieldList.append( tagName + ", " );
           displayPatientsValueList.append( currentPatient[tagName].isEmpty() ? "NULL, " : "'" + currentPatient[tagName] + "', " );
@@ -2200,7 +2204,10 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
       QString displayPatientsFieldUpdateList;
       foreach (QString tagName, currentPatient.keys())
       {
-        displayPatientsFieldUpdateList.append( tagName + "=" + currentPatient[tagName] + ", " );
+        if (tagName.compare("PatientIndex"))
+        {
+          displayPatientsFieldUpdateList.append( tagName + "='" + (currentPatient[tagName].isEmpty() ? "NULL" : currentPatient[tagName]) + "', " );
+        }
       }
       // Trim the separators from the end
       displayPatientsFieldUpdateList = displayPatientsFieldUpdateList.left(displayPatientsFieldUpdateList.size() - 2);
@@ -2222,9 +2229,7 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
   {
     // Insert row into DisplayStudies if does not exist
     QMap<QString, QString> currentStudy = displayFieldsMapStudy[currentStudyInstanceUid];
-    QSqlQuery displayStudiesQuery(Database);
-    QSqlQuery applyDisplayStudyChangesStatement(Database);
-    displayStudiesQuery.prepare( QString("SELECT StudyInstanceUID FROM DisplayStudies WHERE StudyInstanceUID = %1 ;").arg(currentStudy["StudyInstanceUID"]) );
+    QSqlQuery displayStudiesQuery(QString("SELECT StudyInstanceUID FROM DisplayStudies WHERE StudyInstanceUID = '%1' ;").arg(currentStudyInstanceUid), Database);
     if (!displayStudiesQuery.next())
     {
       QString displayStudiesFieldList, displayStudiesValueList;
@@ -2235,7 +2240,7 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
           displayStudiesFieldList.append( "PatientsUID, " );
           displayStudiesValueList.append( "'" + QString::number(patientIndexToPatientUidMap[currentStudy["PatientIndex"].toInt()]) + "', " );
         }
-        else
+        else if (tagName.compare("PatientsUID"))
         {
           displayStudiesFieldList.append( tagName + ", " );
           displayStudiesValueList.append( currentStudy[tagName].isEmpty() ? "NULL, " : "'" + currentStudy[tagName] + "', " );
@@ -2245,9 +2250,10 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
       displayStudiesFieldList = displayStudiesFieldList.left(displayStudiesFieldList.size() - 3);
       displayStudiesValueList = displayStudiesValueList.left(displayStudiesValueList.size() - 2);
 
-      applyDisplayStudyChangesStatement.prepare ( "INSERT INTO DisplayStudies (?) values (?);" );
-      applyDisplayStudyChangesStatement.bindValue ( 0, displayStudiesFieldList );
-      applyDisplayStudyChangesStatement.bindValue ( 1, displayStudiesValueList );
+      QSqlQuery insertDisplayStudyStatement(Database);
+      QString insertDisplayStudyStatementString = 
+        QString("INSERT INTO DisplayStudies (%1) VALUES (%2);").arg(displayStudiesFieldList).arg(displayStudiesValueList);
+      loggedExec(insertDisplayStudyStatement, insertDisplayStudyStatementString);
     }
     else // Update if it already exists
     {
@@ -2260,26 +2266,24 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
         }
         else
         {
-          displayStudiesFieldUpdateList.append( tagName + "=" + currentStudy[tagName] + ", " );
+          displayStudiesFieldUpdateList.append( tagName + "='" + (currentStudy[tagName].isEmpty() ? "NULL" : currentStudy[tagName]) + "', " );
         }
       }
       // Trim the separators from the end
       displayStudiesFieldUpdateList = displayStudiesFieldUpdateList.left(displayStudiesFieldUpdateList.size() - 2);
 
-      QString applyDisplayStudyChangesStatementString = 
+      QSqlQuery updateDisplayStudyStatement(Database);
+      QString updateDisplayStudyStatementString = 
         QString("UPDATE DisplayStudies SET %1 WHERE StudyInstanceUID=%2;").arg(displayStudiesFieldUpdateList).arg(currentStudy["StudyInstanceUID"]);
-      applyDisplayStudyChangesStatement.prepare(applyDisplayStudyChangesStatementString);
+      loggedExec(updateDisplayStudyStatement, updateDisplayStudyStatementString);
     }
-    loggedExec(applyDisplayStudyChangesStatement);
   }
 
   foreach (QString currentSeriesInstanceUid, displayFieldsMapSeries.keys())
   {
     // Insert row into DisplaySeries if does not exist
     QMap<QString, QString> currentSeries = displayFieldsMapSeries[currentSeriesInstanceUid];
-    QSqlQuery displaySeriesQuery(Database);
-    QSqlQuery applyDisplaySeriesChangesStatement(Database);
-    displaySeriesQuery.prepare( QString("SELECT SeriesInstanceUID FROM DisplaySeries WHERE SeriesInstanceUID = %1 ;").arg(currentSeries["SeriesInstanceUID"]) );
+    QSqlQuery displaySeriesQuery(QString("SELECT SeriesInstanceUID FROM DisplaySeries WHERE SeriesInstanceUID = '%1' ;").arg(currentSeriesInstanceUid), Database);
     if (!displaySeriesQuery.next())
     {
       QString displaySeriesFieldList, displaySeriesValueList;
@@ -2292,24 +2296,25 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
       displaySeriesFieldList = displaySeriesFieldList.left(displaySeriesFieldList.size() - 3);
       displaySeriesValueList = displaySeriesValueList.left(displaySeriesValueList.size() - 2);
 
-      applyDisplaySeriesChangesStatement.prepare ( "INSERT INTO DisplaySeries (?) values (?);" );
-      applyDisplaySeriesChangesStatement.bindValue ( 0, displaySeriesFieldList );
-      applyDisplaySeriesChangesStatement.bindValue ( 1, displaySeriesValueList );
+      QSqlQuery insertDisplaySeriesStatement(Database);
+      QString insertDisplaySeriesStatementString = 
+        QString("INSERT INTO DisplaySeries (%1) VALUES (%2);").arg(displaySeriesFieldList).arg(displaySeriesValueList);
+      loggedExec(insertDisplaySeriesStatement, insertDisplaySeriesStatementString);
     }
     else // Update if it already exists
     {
       QString displaySeriesFieldUpdateList;
       foreach (QString tagName, currentSeries.keys())
       {
-        displaySeriesFieldUpdateList.append( tagName + "=" + currentSeries[tagName] + ", " );
+        displaySeriesFieldUpdateList.append( tagName + "='" + (currentSeries[tagName].isEmpty() ? "NULL" : currentSeries[tagName]) + "', " );
       }
       // Trim the separators from the end
       displaySeriesFieldUpdateList = displaySeriesFieldUpdateList.left(displaySeriesFieldUpdateList.size() - 2);
 
-      QString applyDisplaySeriesChangesStatementString = 
+      QSqlQuery updateDisplaySeriesStatement(Database);
+      QString updateDisplaySeriesStatementString = 
         QString("UPDATE DisplaySeries SET %1 WHERE SeriesInstanceUID=%2;").arg(displaySeriesFieldUpdateList).arg(currentSeries["SeriesInstanceUID"]);
-      applyDisplaySeriesChangesStatement.prepare(applyDisplaySeriesChangesStatementString);
+      loggedExec(updateDisplaySeriesStatement, updateDisplaySeriesStatementString);
     }
-    loggedExec(applyDisplaySeriesChangesStatement);
   }
 }

@@ -299,7 +299,10 @@ set(CTK_C_FLAGS "${CMAKE_C_FLAGS_INIT} ${COVERAGE_C_FLAGS} ${ADDITIONAL_C_FLAGS}
 set(CTK_CXX_FLAGS "${CMAKE_CXX_FLAGS_INIT} ${VISIBILITY_CXX_FLAGS} ${COVERAGE_CXX_FLAGS} ${ADDITIONAL_CXX_FLAGS}")
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-  set(cflags "-Wall -Wextra -Wpointer-arith -Winvalid-pch -Wcast-align -Wwrite-strings -D_FORTIFY_SOURCE=2")
+  set(cflags "-Wall -Wextra -Wpointer-arith -Winvalid-pch -Wcast-align -Wwrite-strings")
+  if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    set(cflags "${cflags} -D_FORTIFY_SOURCE=2")
+  endif()
 
   ctkFunctionCheckCompilerFlags("-fdiagnostics-show-option" cflags)
   ctkFunctionCheckCompilerFlags("-Wl,--no-undefined" cflags)
@@ -359,7 +362,7 @@ ctk_enable_option(DICOM "Enable default DICOM support" OFF
 # host and/or hosted application. This will not enable any example plugins
 # or executables (enable CTK_ENABLE_EXAMPLES for that).
 ctk_enable_option(DICOMApplicationHosting "Enable DICOM Part 19 Application Hosting support" OFF
-                  CTK_PLUGIN_org.commontk.dah.host AND CTK_PLUGIN_org.commontk.dah.app)
+                  CTK_PLUGIN_org.commontk.dah.host AND CTK_PLUGIN_org.commontk.dah.hostedapp)
 
 # The CTK Qt Widgets. This will enable the Qt Widget library only.
 # It might trigger the enabling of other widget libraries in combination
@@ -505,6 +508,11 @@ set(CTK_ENABLED_LIBS ${_enabled_libs} CACHE INTERNAL "" FORCE)
 ctk_app_option(ctkDICOM
                "Build the DICOM example application" OFF
                CTK_ENABLE_DICOM AND CTK_BUILD_EXAMPLES)
+
+
+ctk_app_option(ctkDICOM2
+               "Build the new DICOM example application (experimental)" OFF
+               CTK_ENABLE_DICOM AND CTK_BUILD_EXAMPLES)
                
 ctk_app_option(ctkDICOMIndexer
                "Build the DICOM example application" OFF
@@ -525,6 +533,10 @@ ctk_app_option(ctkDICOMRetrieve
 ctk_app_option(ctkDICOMQueryRetrieve
                "Build the DICOM example application" OFF
                CTK_ENABLE_DICOM AND CTK_BUILD_EXAMPLES)
+               
+ctk_app_option(ctkDICOMHost
+               "Build the DICOM application host example application" OFF
+               CTK_ENABLE_DICOMApplicationHosting AND CTK_BUILD_EXAMPLES)
                
 ctk_app_option(ctkExampleHost
                "Build the DICOM example application" OFF
@@ -614,7 +626,7 @@ ctk_plugin_option(org.commontk.plugingenerator.ui
 
 # Plug-ins related to DICOM WG23 (Application Hosting)
 ctk_plugin_option(org.commontk.dah.core "Build the org.commontk.dah.core plugin." OFF)
-ctk_plugin_option(org.commontk.dah.app "Build the org.commontk.dah.app plugin." OFF
+ctk_plugin_option(org.commontk.dah.hostedapp "Build the org.commontk.dah.hostedapp plugin." OFF
                   CTK_ENABLE_DICOMApplicationHosting)
 ctk_plugin_option(org.commontk.dah.host "Build the org.commontk.dah.host plugin." OFF
                   CTK_ENABLE_DICOMApplicationHosting)
@@ -622,6 +634,10 @@ ctk_plugin_option(org.commontk.dah.host "Build the org.commontk.dah.host plugin.
 ctk_plugin_option(org.commontk.dah.exampleapp
                   "Build the org.commontk.dah.exampleapp plugin." OFF
                   CTK_APP_ctkExampleHostedApp)
+                  
+ctk_plugin_option(org.commontk.dah.cmdlinemoduleapp
+                  "Build the org.commontk.dah.cmdlinemoduleapp plugin." OFF
+                  CTK_APP_ctkCommandLineModuleApp)
                   
 ctk_plugin_option(org.commontk.dah.examplehost
                   "Build the org.commontk.dah.examplehost plugin." OFF
@@ -824,7 +840,7 @@ if(CTK_USE_CONTRIBUTED_PLUGINS)
     ctkFunctionCheckoutRepo(
       NAME ExternalProjectsContrib
       GIT_URL github.com/commontk/ExternalProjectsContrib.git
-      GIT_TAG 97dcdc261b
+      GIT_TAG c15781914f
       )
   endif()
 
@@ -860,31 +876,53 @@ foreach(_external_target ${EXTERNAL_TARGETS})
 endforeach()
 
 foreach(_external_target ${EXTERNAL_TARGETS})
+  set(_package_name ${${_external_target}_FIND_PACKAGE_CMD})
+  if("${_package_name}" STREQUAL "")
+    set(_package_name ${_external_target})
+  endif()
   if(${_external_target}_INCLUDE_DIRS)
-    #message("[${_external_target}] Resolving include variables: ${${_external_target}_INCLUDE_DIRS}")
+    #message("[${_package_name}] Resolving include variables: ${${_external_target}_INCLUDE_DIRS}")
+    set(_updated_include_dirs)
     foreach(_include_variable ${${_external_target}_INCLUDE_DIRS})
-      #message("[${_external_target}] Appending ${${_include_variable}}")
+      set(_expanded_include_variable ${_include_variable})
       if(${_include_variable})
-        list(APPEND ${_external_target}_INCLUDE_DIRS ${${_include_variable}})
-      else()
-        list(APPEND ${_external_target}_INCLUDE_DIRS ${_include_variable})
+        #message("[${_package_name}] Expanding [${_include_variable}] into [${${_include_variable}}]")
+        set(_expanded_include_variable ${${_include_variable}})
       endif()
-      #message("[${_external_target}] New dirs: ${${_external_target}_INCLUDE_DIRS}")
+      foreach(_include_dir ${_expanded_include_variable})
+        if(EXISTS ${_include_dir})
+          #message("[${_package_name}] Appending ${_include_dir}")
+          list(APPEND _updated_include_dirs ${_include_dir})
+        else()
+          message(STATUS "[${_package_name}] Skipping nonexistent include directory or not set variable [${_include_dir}]")
+        endif()
+      endforeach()
+      #message("[${_package_name}] New dirs: ${_updated_include_dirs}")
     endforeach()
-    #message("[${_external_target}] Appended dirs: ${${_external_target}_INCLUDE_DIRS}")
+    set(${_external_target}_INCLUDE_DIRS ${_updated_include_dirs})
+    #message("[${_package_name}] Appended dirs: ${${_external_target}_INCLUDE_DIRS}")
   endif()
   if(${_external_target}_LIBRARY_DIRS)
-    #message("[${_external_target}] Resolving library variables: ${${_external_target}_LIBRARY_DIRS}")
+    #message("[${_package_name}] Resolving library variables: ${${_external_target}_LIBRARY_DIRS}")
+    set(_updated_library_dirs)
     foreach(_library_variable ${${_external_target}_LIBRARY_DIRS})
-      #message("[${_external_target}] Appending ${${_library_variable}}")
+      set(_expanded_library_variable ${_library_variable})
       if(${_library_variable})
-        list(APPEND ${_external_target}_LIBRARY_DIRS ${${_library_variable}})
-      else()
-        list(APPEND ${_external_target}_LIBRARY_DIRS ${_library_variable})
+        #message("[${_package_name}] Expanding [${_library_variable}] into [${${_library_variable}}]")
+        set(_expanded_library_variable ${${_library_variable}})
       endif()
-      #message("[${_external_target}] New dirs: ${${_external_target}_LIBRARY_DIRS}")
+      foreach(_library_dir ${_expanded_library_variable})
+        if(EXISTS ${_library_dir})
+          #message("[${_package_name}] Appending ${_library_dir}")
+          list(APPEND _updated_library_dirs ${_library_dir})
+        else()
+          message(STATUS "[${_package_name}] Skipping nonexistent library directory or not set variable [${_library_dir}]")
+        endif()
+      endforeach()
+      #message("[${_package_name}] New dirs: ${_updated_library_dirs}")
     endforeach()
-    #message("[${_external_target}] Appended dirs: ${${_external_target}_LIBRARY_DIRS}")
+    set(${_external_target}_LIBRARY_DIRS ${_updated_library_dirs})
+    #message("[${_package_name}] Appended dirs: ${${_external_target}_LIBRARY_DIRS}")
   endif()
 endforeach()
 

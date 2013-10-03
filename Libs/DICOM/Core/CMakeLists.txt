@@ -30,7 +30,6 @@ set(KIT_SRCS
   ctkDICOMAbstractThumbnailGenerator.h
   ctkDICOMDatabase.cpp
   ctkDICOMDatabase.h
-  ctkDICOMDataset.cpp
   ctkDICOMDataset.h
   ctkDICOMDisplayedFieldGenerator.cpp
   ctkDICOMDisplayedFieldGenerator.h

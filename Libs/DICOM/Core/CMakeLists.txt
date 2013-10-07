@@ -30,7 +30,6 @@ set(KIT_SRCS
   ctkDICOMAbstractThumbnailGenerator.h
   ctkDICOMDatabase.cpp
   ctkDICOMDatabase.h
-  ctkDICOMDataset.h
   ctkDICOMDisplayedFieldGenerator.cpp
   ctkDICOMDisplayedFieldGenerator.h
   ctkDICOMFilterProxyModel.cpp
@@ -38,6 +37,8 @@ set(KIT_SRCS
   ctkDICOMIndexer.cpp
   ctkDICOMIndexer.h
   ctkDICOMIndexer_p.h
+  ctkDICOMItem.cpp
+  ctkDICOMItem.h
   ctkDICOMModel.cpp
   ctkDICOMModel.h
   ctkDICOMPersonName.cpp
@@ -48,6 +49,8 @@ set(KIT_SRCS
   ctkDICOMRetrieve.h
   ctkDICOMTester.cpp
   ctkDICOMTester.h
+  ctkDICOMUtil.cpp
+  ctkDICOMUtil.h
   ctkDICOMDisplayedFieldGeneratorAbstractRule.h
   ctkDICOMDisplayedFieldGeneratorDefaultRule.h
   ctkDICOMDisplayedFieldGeneratorRadiotherapySeriesDescriptionRule.h

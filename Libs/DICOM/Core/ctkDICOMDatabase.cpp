@@ -714,7 +714,7 @@ void ctkDICOMDatabase::loadFileHeader (QString fileName)
   OFCondition status = fileFormat.loadFile(fileName.toLatin1().data());
   if (status.good())
     {
-      DcmItem *dataset = fileFormat.getDataset();
+      DcmDataset *dataset = fileFormat.getDataset();
       DcmStack stack;
       while (dataset->nextObject(stack, true) == EC_Normal)
         {

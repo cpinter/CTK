@@ -39,7 +39,7 @@ set(_SAVED_DCMTK_DIR ${DCMTK_DIR})
 #
 # First, try to use NO_MODULE
 message(STATUS "Trying to find DCMTK expecting DCMTKConfig.cmake")
-find_package(DCMTK QUIET NO_MODULE)
+find_package(DCMTK QUIET NO_MODULE NO_DEFAULT_PATH)
 if(DCMTK_FOUND
     AND NOT "x" STREQUAL "x${DCMTK_LIBRARIES}"
     AND NOT "x" STREQUAL "x${DCMTK_INCLUDE_DIRS}")

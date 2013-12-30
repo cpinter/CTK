@@ -1709,7 +1709,7 @@ void ctkDICOMDatabase::updateDisplayedFields()
   d->loggedExec(newFilesQuery,QString("SELECT SOPInstanceUID, SeriesInstanceUID FROM Images WHERE DisplayedFieldsUpdatedTimestamp IS NULL;"));
 
   // Populate display fields maps from the current display tables
-  QMap<QString /*SOPInstanceUID*/, QMap<QString /*DisplayField*/, QString /*Value*/> > displayFieldsMapSeries;
+  QMap<QString /*SeriesInstanceUID*/, QMap<QString /*DisplayField*/, QString /*Value*/> > displayFieldsMapSeries;
   QMap<QString /*StudyInstanceUID*/, QMap<QString /*DisplayField*/, QString /*Value*/> > displayFieldsMapStudy;
   QVector<QMap<QString /*DisplayField*/, QString /*Value*/> > displayFieldsVectorPatient; // The index in the vector is the internal patient UID
 

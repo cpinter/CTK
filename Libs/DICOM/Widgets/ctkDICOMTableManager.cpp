@@ -26,6 +26,7 @@
 // Qt includes
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QResizeEvent>
 #include <QSplitter>
 
 class ctkDICOMTableManagerPrivate : public Ui_ctkDICOMTableManager
@@ -40,15 +41,18 @@ public:
   ~ctkDICOMTableManagerPrivate();
 
   void init();
-  void setCTKDICOMDatabase(ctkDICOMDatabase *db);
+  void setDICOMDatabase(ctkDICOMDatabase *db);
 
   ctkDICOMDatabase* dicomDatabase;
+
+  bool m_DynamicTableLayout;
 };
 
 //------------------------------------------------------------------------------
 
 ctkDICOMTableManagerPrivate::ctkDICOMTableManagerPrivate(ctkDICOMTableManager &obj)
   : q_ptr(&obj)
+  , m_DynamicTableLayout(false)
 {
 
 }
@@ -98,7 +102,7 @@ void ctkDICOMTableManagerPrivate::init()
 
 //------------------------------------------------------------------------------
 
-void ctkDICOMTableManagerPrivate::setCTKDICOMDatabase(ctkDICOMDatabase* db)
+void ctkDICOMTableManagerPrivate::setDICOMDatabase(ctkDICOMDatabase* db)
 {
   this->patientsTable->setDicomDataBase(db);
   this->studiesTable->setDicomDataBase(db);
@@ -110,7 +114,6 @@ void ctkDICOMTableManagerPrivate::setCTKDICOMDatabase(ctkDICOMDatabase* db)
 // ctkDICOMTableManager methods
 
 //----------------------------------------------------------------------------
-
 ctkDICOMTableManager::ctkDICOMTableManager(QWidget *parent)
   :Superclass(parent)
   , d_ptr(new ctkDICOMTableManagerPrivate(*this))
@@ -120,33 +123,29 @@ ctkDICOMTableManager::ctkDICOMTableManager(QWidget *parent)
 }
 
 //------------------------------------------------------------------------------
-
 ctkDICOMTableManager::ctkDICOMTableManager(ctkDICOMDatabase *db, QWidget *parent)
   : Superclass(parent)
   , d_ptr(new ctkDICOMTableManagerPrivate(*this))
 {
   Q_D(ctkDICOMTableManager);
   d->init();
-  d->setCTKDICOMDatabase(db);
+  d->setDICOMDatabase(db);
 }
 
 //------------------------------------------------------------------------------
-
 ctkDICOMTableManager::~ctkDICOMTableManager()
 {
 
 }
 
 //------------------------------------------------------------------------------
-
-void ctkDICOMTableManager::setCTKDICOMDatabase(ctkDICOMDatabase* db)
+void ctkDICOMTableManager::setDICOMDatabase(ctkDICOMDatabase* db)
 {
   Q_D(ctkDICOMTableManager);
-  d->setCTKDICOMDatabase(db);
+  d->setDICOMDatabase(db);
 }
 
 //------------------------------------------------------------------------------
-
 void ctkDICOMTableManager::setTableOrientation(const Qt::Orientation &o) const
 {
   Q_D(const ctkDICOMTableManager);
@@ -154,7 +153,6 @@ void ctkDICOMTableManager::setTableOrientation(const Qt::Orientation &o) const
 }
 
 //------------------------------------------------------------------------------
-
 Qt::Orientation ctkDICOMTableManager::tableOrientation()
 {
   Q_D(ctkDICOMTableManager);
@@ -162,25 +160,27 @@ Qt::Orientation ctkDICOMTableManager::tableOrientation()
 }
 
 //------------------------------------------------------------------------------
-
 QStringList ctkDICOMTableManager::currentPatientsSelection()
 {
   Q_D(ctkDICOMTableManager);
   return d->patientsTable->currentSelection();
 }
 
+//------------------------------------------------------------------------------
 QStringList ctkDICOMTableManager::currentStudiesSelection()
 {
   Q_D(ctkDICOMTableManager);
   return d->studiesTable->currentSelection();
 }
 
+//------------------------------------------------------------------------------
 QStringList ctkDICOMTableManager::currentSeriesSelection()
 {
   Q_D(ctkDICOMTableManager);
   return d->seriesTable->currentSelection();
 }
 
+//------------------------------------------------------------------------------
 void ctkDICOMTableManager::onPatientsQueryChanged(const QStringList &uids)
 {
   Q_D(ctkDICOMTableManager);
@@ -189,6 +189,7 @@ void ctkDICOMTableManager::onPatientsQueryChanged(const QStringList &uids)
   d->studiesTable->addSqlWhereCondition(patientCondition);
 }
 
+//------------------------------------------------------------------------------
 void ctkDICOMTableManager::onStudiesQueryChanged(const QStringList &uids)
 {
   Q_D(ctkDICOMTableManager);
@@ -196,6 +197,7 @@ void ctkDICOMTableManager::onStudiesQueryChanged(const QStringList &uids)
   d->seriesTable->addSqlWhereCondition(studiesCondition);
 }
 
+//------------------------------------------------------------------------------
 void ctkDICOMTableManager::onPatientsSelectionChanged(const QStringList &uids)
 {
   std::pair<QString, QStringList> patientCondition;
@@ -213,6 +215,7 @@ void ctkDICOMTableManager::onPatientsSelectionChanged(const QStringList &uids)
   d->seriesTable->addSqlWhereCondition(patientCondition);
 }
 
+//------------------------------------------------------------------------------
 void ctkDICOMTableManager::onStudiesSelectionChanged(const QStringList &uids)
 {
   std::pair<QString, QStringList> studiesCondition;
@@ -227,4 +230,38 @@ void ctkDICOMTableManager::onStudiesSelectionChanged(const QStringList &uids)
       studiesCondition.second = d->studiesTable->uidsForAllRows();
     }
   d->seriesTable->addSqlWhereCondition(studiesCondition);
+}
+
+//------------------------------------------------------------------------------
+void ctkDICOMTableManager::setDynamicTableLayout(bool dynamic)
+{
+  Q_D(ctkDICOMTableManager);
+  d->m_DynamicTableLayout = dynamic;
+}
+
+bool ctkDICOMTableManager::dynamicTableLayout() const
+{
+  Q_D(const ctkDICOMTableManager);
+  return d->m_DynamicTableLayout;
+}
+
+//------------------------------------------------------------------------------
+void ctkDICOMTableManager::updateTableViews()
+{
+  Q_D(ctkDICOMTableManager);
+  d->patientsTable->setQuery();
+  d->studiesTable->setQuery();
+  d->seriesTable->setQuery();
+}
+
+//------------------------------------------------------------------------------
+void ctkDICOMTableManager::resizeEvent(QResizeEvent *e)
+{
+  this->Superclass::resizeEvent(e);
+  Q_D(ctkDICOMTableManager);
+  if (!d->m_DynamicTableLayout)
+    return;
+
+  //Minimum size = 800 * 1.28 = 1024 => use horizontal layout (otherwise table size would be too small)
+  this->setTableOrientation(e->size().width() > 1.28*this->minimumWidth() ? Qt::Horizontal : Qt::Vertical);
 }

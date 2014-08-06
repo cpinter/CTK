@@ -6,6 +6,7 @@ set(KIT ${PROJECT_NAME})
 set(TEST_SOURCES
   ctkVTKConnectionTest1.cpp
   ctkVTKConnectionTestObjectDelete.cpp
+  ctkErrorLogModelFileLoggingTest1.cpp
   ctkVTKObjectTest1.cpp
   )
 
@@ -70,6 +71,7 @@ target_link_libraries(${KIT}CppTests ${LIBRARY_NAME} ${CTK_BASE_LIBRARIES})
 
 SIMPLE_TEST( ctkVTKConnectionTest1 )
 SIMPLE_TEST( ctkVTKConnectionTestObjectDelete )
+SIMPLE_TEST( ctkVTKErrorLogModelFileLoggingTest1 )
 SIMPLE_TEST( ctkVTKObjectTest1 )
 
 #

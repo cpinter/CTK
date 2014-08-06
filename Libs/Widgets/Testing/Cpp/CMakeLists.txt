@@ -41,6 +41,7 @@ set(TEST_SOURCES
   ctkDynamicSpacerTest1.cpp
   ctkDynamicSpacerTest2.cpp
   ctkErrorLogFDMessageHandlerWithThreadsTest1.cpp
+  ctkErrorLogModelFileLoggingTest1.cpp
   ctkErrorLogModelTest1.cpp
   ctkErrorLogModelEntryGroupingTest1.cpp
   ctkErrorLogModelTerminalOutputTest1.cpp
@@ -297,6 +298,7 @@ SIMPLE_TEST( ctkDoubleSpinBoxValueProxyTest )
 SIMPLE_TEST( ctkDynamicSpacerTest1 )
 SIMPLE_TEST( ctkDynamicSpacerTest2 )
 SIMPLE_TEST( ctkErrorLogFDMessageHandlerWithThreadsTest1 )
+SIMPLE_TEST( ctkErrorLogModelFileLoggingTest1 )
 SIMPLE_TEST( ctkErrorLogModelTest1 )
 SIMPLE_TEST( ctkErrorLogModelEntryGroupingTest1 )
 SIMPLE_TEST( ctkErrorLogModelTerminalOutputTest1 --test-launcher $<TARGET_FILE:${KIT}CppTests>)

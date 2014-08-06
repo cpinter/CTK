@@ -20,6 +20,8 @@
 
 #include "ctkErrorLogAbstractMessageHandler.h"
 
+#include "ctkErrorLogContext.h"
+
 #include <QHash>
 #include <QDateTime>
 
@@ -109,8 +111,9 @@ void ctkErrorLogAbstractMessageHandler::setEnabled(bool value)
 
 // --------------------------------------------------------------------------
 void ctkErrorLogAbstractMessageHandler::handleMessage(const QString& threadId,
-                                                      ctkErrorLogLevel::LogLevel logLevel,
-                                                      const QString& origin, const QString& text)
+                                                      const QString& origin,
+                                                      const ctkErrorLogContext& logContext,
+                                                      const QString &text)
 {
   Q_D(ctkErrorLogAbstractMessageHandler);
   if (logLevel <= ctkErrorLogLevel::Info)
@@ -127,7 +130,7 @@ void ctkErrorLogAbstractMessageHandler::handleMessage(const QString& threadId,
       d->TerminalOutputs.value(ctkErrorLogTerminalOutput::StandardError)->output(text);
       }
     }
-  emit this->messageHandled(QDateTime::currentDateTime(), threadId, logLevel, origin, text);
+  emit this->messageHandled(QDateTime::currentDateTime(), threadId, logLevel, origin, logContext, text);
 }
 
 // --------------------------------------------------------------------------

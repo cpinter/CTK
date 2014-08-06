@@ -29,6 +29,7 @@
 // CTK includes
 #include "ctkErrorLogStatusMessageHandler.h"
 #include "ctkUtils.h"
+#include "ctkErrorLogContext.h"
 
 // --------------------------------------------------------------------------
 QString ctkErrorLogStatusMessageHandler::HandlerName = QLatin1String("Status");
@@ -86,5 +87,5 @@ void ctkErrorLogStatusMessageHandler::statusBarMessageChanged(const QString& tex
     }
   this->handleMessage(
         ctk::qtHandleToString(QThread::currentThreadId()),
-        ctkErrorLogLevel::Status, this->handlerPrettyName(), text);
+        ctkErrorLogLevel::Status, this->handlerPrettyName(), ctkErrorLogContext(text), text);
 }

@@ -111,6 +111,7 @@ void ctkErrorLogAbstractMessageHandler::setEnabled(bool value)
 
 // --------------------------------------------------------------------------
 void ctkErrorLogAbstractMessageHandler::handleMessage(const QString& threadId,
+                                                      ctkErrorLogLevel::LogLevel logLevel,
                                                       const QString& origin,
                                                       const ctkErrorLogContext& logContext,
                                                       const QString &text)

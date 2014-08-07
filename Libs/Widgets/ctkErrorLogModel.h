@@ -32,7 +32,7 @@
 //------------------------------------------------------------------------------
 class ctkErrorLogAbstractMessageHandler;
 class ctkErrorLogModelPrivate;
-class ctkErrorLogContext;
+struct ctkErrorLogContext;
 
 //------------------------------------------------------------------------------
 /// \ingroup Widgets

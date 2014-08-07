@@ -32,7 +32,7 @@
 
 //------------------------------------------------------------------------------
 class ctkErrorLogAbstractMessageHandlerPrivate;
-class ctkErrorLogContext;
+struct ctkErrorLogContext;
 
 //------------------------------------------------------------------------------
 /// \ingroup Core

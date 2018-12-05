@@ -32,6 +32,8 @@ set(KIT_SRCS
   ctkDICOMRetrieve.h
   ctkDICOMTester.cpp
   ctkDICOMTester.h
+  ctkDICOMUtil.cpp
+  ctkDICOMUtil.h
   ctkDICOMDisplayedFieldGeneratorAbstractRule.h
   ctkDICOMDisplayedFieldGeneratorDefaultRule.h
   ctkDICOMDisplayedFieldGeneratorRadiotherapySeriesDescriptionRule.h

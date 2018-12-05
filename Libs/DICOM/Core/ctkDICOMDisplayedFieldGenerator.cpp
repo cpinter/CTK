@@ -40,6 +40,7 @@ static ctkLogger logger("org.commontk.dicom.DICOMDisplayedFieldGenerator" );
 
 //------------------------------------------------------------------------------
 ctkDICOMDisplayedFieldGeneratorPrivate::ctkDICOMDisplayedFieldGeneratorPrivate(ctkDICOMDisplayedFieldGenerator& o) : q_ptr(&o)
+  ,Database(NULL)
 {
   // register commonly used rules
   AllRules.append(new ctkDICOMDisplayedFieldGeneratorDefaultRule);
@@ -47,7 +48,7 @@ ctkDICOMDisplayedFieldGeneratorPrivate::ctkDICOMDisplayedFieldGeneratorPrivate(c
 
   foreach(ctkDICOMDisplayedFieldGeneratorAbstractRule* rule, AllRules)
   {
-    rule->registerEmptyFieldNames(EmptyFieldNamesDisplayPatients, EmptyFieldNamesDisplayStudies, EmptyFieldNamesDisplaySeries);
+    rule->registerEmptyFieldNames(EmptyFieldNamesDisplaySeries, EmptyFieldNamesDisplayStudies, EmptyFieldNamesDisplayPatients);
   }
 }
 

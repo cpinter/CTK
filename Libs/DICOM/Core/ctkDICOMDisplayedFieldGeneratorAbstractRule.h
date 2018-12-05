@@ -28,6 +28,8 @@
 // DCMTK includes
 #include <dcmtk/dcmdata/dcdeftag.h>
 
+#include "ctkDICOMCoreExport.h"
+
 class ctkDICOMDatabase;
 
 /// \ingroup DICOM_Core
@@ -44,7 +46,7 @@ public:
     const QMap<QString, QString> &initialFieldsSeries, const QMap<QString, QString> &initialFieldsStudy, const QMap<QString, QString> &initialFieldsPatient,
     const QMap<QString, QString> &newFieldsSeries, const QMap<QString, QString> &newFieldsStudy, const QMap<QString, QString> &newFieldsPatient,
     QMap<QString, QString> &mergedFieldsSeries, QMap<QString, QString> &mergedFieldsStudy, QMap<QString, QString> &mergedFieldsPatient,
-    const QMap<QString, QString> &emptyFieldNamesSeries, const QMap<QString, QString> &emptyFieldNamesStudy, const QMap<QString, QString> &emptyFieldNamesPatient
+    const QMap<QString, QString> &emptyFieldsSeries, const QMap<QString, QString> &emptyFieldsStudy, const QMap<QString, QString> &emptyFieldsPatient
     )=0;
 
   /// \brief TODO

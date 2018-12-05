@@ -73,18 +73,6 @@ static QString ValueIsEmptyString("__VALUE_IS_EMPTY_STRING__");
 // display rules manager
 static QString TableFieldSeparator(":");
 
-//TODO For sake of compiling !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-class ctkDICOMDisplayRuleManager : public QObject
-{
-public:
-  void updateDisplayFieldsForInstance( QString sopInstanceUid,
-    QMap<QString, QString> &displayFieldsMapPatient,
-    QMap<QString, QString> &displayFieldsMapStudy,
-    QMap<QString, QString> &displayFieldsMapSeries ) { };
-
-  void setDatabase(QSqlDatabase &database) { };
-};
-
 //------------------------------------------------------------------------------
 class ctkDICOMDatabasePrivate
 {
@@ -1994,15 +1982,13 @@ void ctkDICOMDatabase::updateDisplayedFields()
   d->loggedExec(newFilesQuery,QString("SELECT SOPInstanceUID, SeriesInstanceUID FROM Images WHERE DisplayedFieldsUpdatedTimestamp IS NULL;"));
 
   // Populate display fields maps from the current display tables
-  QMap<QString /*SOPInstanceUID*/, QMap<QString /*DisplayField*/, QString /*Value*/> > displayFieldsMapSeries;
+  QMap<QString /*SeriesInstanceUID*/, QMap<QString /*DisplayField*/, QString /*Value*/> > displayFieldsMapSeries;
   QMap<QString /*StudyInstanceUID*/, QMap<QString /*DisplayField*/, QString /*Value*/> > displayFieldsMapStudy;
   QVector<QMap<QString /*DisplayField*/, QString /*Value*/> > displayFieldsVectorPatient; // The index in the vector is the internal patient UID
 
   d->DisplayedFieldGenerator.setDatabase(this);
 
   // Get display names for newly added files and add them into the display tables
-  ctkDICOMDisplayRuleManager* ruleManager = new ctkDICOMDisplayRuleManager();
-  ruleManager->setDatabase(d->Database);
   while (newFilesQuery.next())
   {
     QString sopInstanceUID = newFilesQuery.value(0).toString();
@@ -2012,10 +1998,10 @@ void ctkDICOMDatabase::updateDisplayedFields()
 
     //TODO: Check for validity of the returned index and keys
     int displayFieldsIndexForCurrentPatient = d->getDisplayPatientFieldsIndex(
-        cachedTags[ctkDICOMDataset::TagKeyStripped(DCM_PatientName)], cachedTags[ctkDICOMDataset::TagKeyStripped(DCM_PatientID)], displayFieldsVectorPatient );
+        cachedTags[ctkDICOMItem::TagKeyStripped(DCM_PatientName)], cachedTags[ctkDICOMItem::TagKeyStripped(DCM_PatientID)], displayFieldsVectorPatient );
     QMap<QString, QString> displayFieldsForCurrentPatient = displayFieldsVectorPatient[ displayFieldsIndexForCurrentPatient ];
 
-    QString displayFieldsKeyForCurrentStudy = d->getDisplayStudyFieldsKey( cachedTags[ctkDICOMDataset::TagKeyStripped(DCM_StudyInstanceUID)], displayFieldsMapStudy );
+    QString displayFieldsKeyForCurrentStudy = d->getDisplayStudyFieldsKey( cachedTags[ctkDICOMItem::TagKeyStripped(DCM_StudyInstanceUID)], displayFieldsMapStudy );
     QMap<QString, QString> displayFieldsForCurrentStudy = displayFieldsMapStudy[ displayFieldsKeyForCurrentStudy ];
     displayFieldsForCurrentStudy["PatientIndex"] = QString::number(displayFieldsIndexForCurrentPatient);
 
@@ -2030,7 +2016,6 @@ void ctkDICOMDatabase::updateDisplayedFields()
     displayFieldsMapStudy[ displayFieldsKeyForCurrentStudy ] = displayFieldsForCurrentStudy;
     displayFieldsVectorPatient[ displayFieldsIndexForCurrentPatient ] = displayFieldsForCurrentPatient;
   }
-  delete ruleManager;
 
   // Update/insert the display values
   if (displayFieldsMapSeries.count() > 0)
@@ -2204,7 +2189,7 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
         }
       }
       // Trim the separators from the end
-      displayPatientsFieldList = displayPatientsFieldList.left(displayPatientsFieldList.size() - 3);
+      displayPatientsFieldList = displayPatientsFieldList.left(displayPatientsFieldList.size() - 2);
       displayPatientsValueList = displayPatientsValueList.left(displayPatientsValueList.size() - 2);
 
       QSqlQuery insertDisplayPatientStatement(Database);
@@ -2268,7 +2253,7 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
         }
       }
       // Trim the separators from the end
-      displayStudiesFieldList = displayStudiesFieldList.left(displayStudiesFieldList.size() - 3);
+      displayStudiesFieldList = displayStudiesFieldList.left(displayStudiesFieldList.size() - 2);
       displayStudiesValueList = displayStudiesValueList.left(displayStudiesValueList.size() - 2);
 
       QSqlQuery insertDisplayStudyStatement(Database);
@@ -2316,10 +2301,10 @@ void ctkDICOMDatabasePrivate::applyDisplayFieldsChanges( QMap<QString, QMap<QStr
       foreach (QString tagName, currentSeries.keys())
       {
         displaySeriesFieldList.append( tagName + ", " );
-        displaySeriesValueList.append( currentSeries[tagName] + ", " );
+        displaySeriesValueList.append( currentSeries[tagName].isEmpty() ? "NULL, " : "'" + currentSeries[tagName] + "', " );
       }
       // Trim the separators from the end
-      displaySeriesFieldList = displaySeriesFieldList.left(displaySeriesFieldList.size() - 3);
+      displaySeriesFieldList = displaySeriesFieldList.left(displaySeriesFieldList.size() - 2);
       displaySeriesValueList = displaySeriesValueList.left(displaySeriesValueList.size() - 2);
 
       QSqlQuery insertDisplaySeriesStatement(Database);

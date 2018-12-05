@@ -80,7 +80,7 @@ public:
   /// \brief TODO
   virtual void registerEmptyFieldNames(QMap<QString, QString> emptyFieldsDisplaySeries, QMap<QString, QString> emptyFieldsDisplayStudies, QMap<QString, QString> emptyFieldsDisplayPatients)
   {
-    emptyFieldNamesDisplaySeries.insertMulti("SeriesDescription", EMPTY_SERIES_DESCRIPTION);
+    emptyFieldsDisplaySeries.insertMulti("SeriesDescription", EMPTY_SERIES_DESCRIPTION);
   }
 
   /// \brief TODO
@@ -111,15 +111,10 @@ public:
     const QMap<QString, QString> &initialFieldsSeries, const QMap<QString, QString> &initialFieldsStudy, const QMap<QString, QString> &initialFieldsPatient,
     const QMap<QString, QString> &newFieldsSeries, const QMap<QString, QString> &newFieldsStudy, const QMap<QString, QString> &newFieldsPatient,
     QMap<QString, QString> &mergedFieldsSeries, QMap<QString, QString> &mergedFieldsStudy, QMap<QString, QString> &mergedFieldsPatient,
-    const QMap<QString, QString> &emptyFieldNamesSeries, const QMap<QString, QString> &emptyFieldNamesStudy, const QMap<QString, QString> &emptyFieldNamesPatient
+    const QMap<QString, QString> &emptyFieldsSeries, const QMap<QString, QString> &emptyFieldsStudy, const QMap<QString, QString> &emptyFieldsPatient
     )
   {
-
-    // TODO: get the real empty fields list from somewhere
-    QMap<QString, QString> emptyFieldsPatient;
-    QMap<QString, QString> emptyFieldsStudy;
-    QMap<QString, QString> emptyFieldsSeries;
-
+    mergeExpectSameValue("PatientIndex", initialFieldsPatient, newFieldsPatient, mergedFieldsPatient, emptyFieldsPatient);
     mergeExpectSameValue("PatientName", initialFieldsPatient, newFieldsPatient, mergedFieldsPatient, emptyFieldsPatient);
     mergeExpectSameValue("PatientID", initialFieldsPatient, newFieldsPatient, mergedFieldsPatient, emptyFieldsPatient);
 
